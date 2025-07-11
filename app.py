@@ -6,7 +6,8 @@ import google.generativeai as genai
 app = Flask(__name__)
 
 # Your Gemini API key
-GEMINI_API_KEY = os.getenv("AIzaSyA7m01H5gtZIE9rXmVf2bOvoeUZTydCddE")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AIzaSyA7m01H5gtZIE9rXmVf2bOvoeUZTydCddE"
+genai.configure(api_key=GEMINI_API_KEY)
 
 # Token tracker per IP
 user_tokens = defaultdict(lambda: 100)
