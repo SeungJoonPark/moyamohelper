@@ -1,32 +1,115 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>🌿 Garden Advisor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 식물 집사</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for a clean Korean font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Apply the Noto Sans KR font to the body */
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        /* Custom animation for the loading spinner */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
 </head>
-<body>
-    <h2>Ask a Gardening Question</h2>
-    
-    <textarea id="question" rows="4" cols="60" placeholder="e.g. When do I prune roses?"></textarea><br><br>
-    <button onclick="send()">Ask</button>
+<body class="bg-green-50 text-gray-800 flex items-center justify-center min-h-screen">
 
-    <h3>Answer:</h3>
-    <pre id="response"></pre>
+    <main class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-2xl mx-4">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-green-800">🌿 모야모에게 물어보세요</h1>
+            <p class="text-gray-500 mt-2">정원 가꾸기, 식물에 대해 무엇이든 물어보세요.</p>
+        </div>
+
+        <!-- Input Section -->
+        <div class="space-y-4">
+            <textarea id="question" rows="5" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="예시) 장미 가지치기는 언제 하는 것이 가장 좋은가요?"></textarea>
+            <button id="askButton" onclick="send()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                질문하기
+            </button>
+        </div>
+
+        <!-- Response Section -->
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold text-green-800 mb-4">답변:</h2>
+            
+            <!-- Loading Indicator -->
+            <div id="loader" class="hidden items-center space-x-3 text-gray-600">
+                <div class="w-6 h-6 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
+                <span>모야모의 AI 정원사에게 물어보는 중입니다... 잠시만 기다려 주세요.</span>
+            </div>
+
+            <!-- Response Content -->
+            <div id="response" class="p-4 bg-green-50 rounded-lg min-h-[100px] whitespace-pre-wrap text-gray-700"></div>
+        </div>
+
+    </main>
 
     <script>
+        // Get references to the DOM elements
+        const questionInput = document.getElementById("question");
+        const askButton = document.getElementById("askButton");
+        const loader = document.getElementById("loader");
+        const responseContainer = document.getElementById("response");
+
         async function send() {
-            const question = document.getElementById("question").value;
+            const question = questionInput.value;
 
-            const res = await fetch("/ask", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ question })
-            });
+            // Simple validation
+            if (!question.trim()) {
+                responseContainer.innerText = "질문을 입력해 주세요.";
+                return;
+            }
 
-            const data = await res.json();
-            document.getElementById("response").innerText = data.answer || data.error;
+            // --- Start Loading State ---
+            askButton.disabled = true;
+            loader.classList.remove("hidden");
+            loader.classList.add("flex"); // Use flex to align items
+            responseContainer.innerText = ""; // Clear previous response
+
+            try {
+                const res = await fetch("/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await res.json();
+                
+                // Display the answer or an error message
+                if (res.ok) {
+                    responseContainer.innerText = data.answer;
+                } else {
+                    responseContainer.innerText = `오류가 발생했습니다: ${data.error || '알 수 없는 오류'}`;
+                }
+
+            } catch (error) {
+                // Handle network or other unexpected errors
+                console.error("Fetch error:", error);
+                responseContainer.innerText = "요청을 보내는 중 문제가 발생했습니다. 네트워크 연결을 확인해 주세요.";
+            } finally {
+                // --- End Loading State ---
+                askButton.disabled = false;
+                loader.classList.add("hidden");
+                loader.classList.remove("flex");
+            }
         }
     </script>
 </body>
