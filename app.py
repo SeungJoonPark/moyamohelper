@@ -1,15 +1,18 @@
-from flask import Flask, render_template, request, jsonify
-import openai
-import os
+from flask import Flask, request, jsonify, render_template
 from collections import defaultdict
+import os
+import google.generativeai as genai
 
 app = Flask(__name__)
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
-user_tokens = defaultdict(lambda: 100)  # crude IP-based token limit
+# Your Gemini API key
+GEMINI_API_KEY = os.getenv("AIzaSyA7m01H5gtZIE9rXmVf2bOvoeUZTydCddE")
+
+# Token tracker per IP
+user_tokens = defaultdict(lambda: 100)
 
 @app.route('/')
-def home():
+def index():
     return render_template("index.html")
 
 @app.route('/ask', methods=['POST'])
@@ -19,16 +22,13 @@ def ask():
     question = data.get("question", "")
 
     if user_tokens[ip] <= 0:
-        return jsonify({'error': 'Token limit reached. Try tomorrow.'}), 429
+        return jsonify({'error': 'Token limit reached.'}), 429
 
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "user", "content": question}]
-        )
-        answer = response['choices'][0]['message']['content']
-        user_tokens[ip] -= len(question.split())  # crude token count
-        return jsonify({'answer': answer})
+        model = genai.GenerativeModel('gemini-pro')
+        response = model.generate_content(question)
+        user_tokens[ip] -= len(question.split())
+        return jsonify({'answer': response.text})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
