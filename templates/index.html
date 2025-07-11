@@ -32,7 +32,7 @@
         
         <!-- Header Section -->
         <div class="text-center mb-8">
-            <!-- Mascot Image with the new, correct link -->
+            <!-- Mascot Image -->
             <img src="https://i.imgur.com/C5cf6F8.jpeg" alt="식물 집사 마스코트" class="w-32 h-32 mx-auto mb-4 rounded-full shadow-md object-cover" onerror="this.onerror=null;this.src='https://placehold.co/128x128/EBF5EB/7F8C8D?text=Error';">
             
             <h1 class="text-4xl font-bold text-green-800">식물 집사</h1>
@@ -71,10 +71,12 @@
         const responseContainer = document.getElementById("response");
 
         async function send() {
-            const question = questionInput.value;
+            // This function now only sends the user's raw question.
+            // The system context is handled by the server in app.py.
+            const userQuestion = questionInput.value;
 
             // Simple validation
-            if (!question.trim()) {
+            if (!userQuestion.trim()) {
                 responseContainer.innerText = "질문을 입력해 주세요.";
                 return;
             }
@@ -82,8 +84,8 @@
             // --- Start Loading State ---
             askButton.disabled = true;
             loader.classList.remove("hidden");
-            loader.classList.add("flex"); // Use flex to align items
-            responseContainer.innerText = ""; // Clear previous response
+            loader.classList.add("flex");
+            responseContainer.innerText = "";
 
             try {
                 const res = await fetch("/ask", {
@@ -91,12 +93,12 @@
                     headers: {
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify({ question })
+                    // The body now only contains the user's question.
+                    body: JSON.stringify({ question: userQuestion })
                 });
 
                 const data = await res.json();
                 
-                // Display the answer or an error message
                 if (res.ok) {
                     responseContainer.innerText = data.answer;
                 } else {
@@ -104,7 +106,6 @@
                 }
 
             } catch (error) {
-                // Handle network or other unexpected errors
                 console.error("Fetch error:", error);
                 responseContainer.innerText = "요청을 보내는 중 문제가 발생했습니다. 네트워크 연결을 확인해 주세요.";
             } finally {
