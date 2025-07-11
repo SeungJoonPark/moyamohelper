@@ -5,12 +5,16 @@ import google.generativeai as genai
 
 app = Flask(__name__)
 
-# Your Gemini API key
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or "AIzaSyA7m01H5gtZIE9rXmVf2bOvoeUZTydCddE"
+# It's best practice to load the key only from the environment variable.
+# The hardcoded key is removed to prevent security issues.
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable not set.")
+
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Token tracker per IP
-user_tokens = defaultdict(lambda: 100)
+# A simple in-memory token tracker (this will reset if the app restarts)
+user_tokens = defaultdict(lambda: 100) # Note: A more robust solution would use a database.
 
 @app.route('/')
 def index():
@@ -22,16 +26,28 @@ def ask():
     data = request.get_json()
     question = data.get("question", "")
 
+    if not question:
+        return jsonify({'error': 'No question provided.'}), 400
+
     if user_tokens[ip] <= 0:
-        return jsonify({'error': 'Token limit reached.'}), 429
+        return jsonify({'error': 'Token limit reached for your IP address.'}), 429
 
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        # --- THIS IS THE KEY CHANGE ---
+        # The model 'gemini-pro' is outdated. Use 'gemini-1.0-pro' instead.
+        model = genai.GenerativeModel('gemini-1.0-pro')
+        
         response = model.generate_content(question)
+        
+        # A more accurate way to count would be to use the API's token count if available.
+        # This is a simple approximation.
         user_tokens[ip] -= len(question.split())
+        
         return jsonify({'answer': response.text})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # It's good practice to log the actual error for debugging
+        app.logger.error(f"An error occurred: {e}")
+        return jsonify({'error': 'An internal error occurred.'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=81)
