@@ -3,6 +3,9 @@ from collections import defaultdict
 import os
 import google.generativeai as genai
 
+# --- ADD THIS LINE FOR DEBUGGING ---
+print(f"--- Using google-generativeai version: {genai.__version__} ---") 
+
 app = Flask(__name__)
 
 # It's best practice to load the key only from the environment variable.
