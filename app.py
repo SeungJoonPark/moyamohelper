@@ -37,8 +37,7 @@ def ask():
 
     try:
         # --- THIS IS THE KEY CHANGE ---
-        # The model 'gemini-pro' is outdated. Use 'gemini-1.0-pro' instead.
-        model = genai.GenerativeModel('gemini-1.0-pro')
+         model = genai.GenerativeModel('gemini-1.5-flash')
         
         response = model.generate_content(question)
         
