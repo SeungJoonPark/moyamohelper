@@ -35,13 +35,13 @@
             <!-- Mascot Image -->
             <img src="https://i.imgur.com/C5cf6F8.jpeg" alt="식물 집사 마스코트" class="w-32 h-32 mx-auto mb-4 rounded-full shadow-md object-cover" onerror="this.onerror=null;this.src='https://placehold.co/128x128/EBF5EB/7F8C8D?text=Error';">
             
-            <h1 class="text-4xl font-bold text-green-800">식물 집사</h1>
+            <h1 class="text-4xl font-bold text-green-800">모야모 식물 집사 AI</h1>
             <p class="text-gray-500 mt-2">정원 가꾸기, 식물에 대해 무엇이든 물어보세요.</p>
         </div>
 
         <!-- Input Section -->
         <div class="space-y-4">
-            <textarea id="question" rows="5" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="예시) 장미 가지치기는 언제 하는 것이 가장 좋은가요?"></textarea>
+            <textarea id="question" rows="5" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="예시) 수레국화 씨앗은 언제 심는 것이 가장 좋은가요?"></textarea>
             <button id="askButton" onclick="send()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
                 질문하기
             </button>
@@ -54,7 +54,7 @@
             <!-- Loading Indicator -->
             <div id="loader" class="hidden items-center space-x-3 text-gray-600">
                 <div class="w-6 h-6 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-                <span>답변을 생성 중입니다... 잠시만 기다려 주세요.</span>
+                <span>모야모에게 물어보는 중입니다... 잠시만 기다려 주세요.</span>
             </div>
 
             <!-- Response Content -->
