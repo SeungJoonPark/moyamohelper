@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>🌿 Garden Advisor</title>
+</head>
+<body>
+    <h2>Ask a Gardening Question</h2>
+    
+    <textarea id="question" rows="4" cols="60" placeholder="e.g. When do I prune roses?"></textarea><br><br>
+    <button onclick="send()">Ask</button>
+
+    <h3>Answer:</h3>
+    <pre id="response"></pre>
+
+    <script>
+        async function send() {
+            const question = document.getElementById("question").value;
+
+            const res = await fetch("/ask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ question })
+            });
+
+            const data = await res.json();
+            document.getElementById("response").innerText = data.answer || data.error;
+        }
+    </script>
+</body>
+</html>
