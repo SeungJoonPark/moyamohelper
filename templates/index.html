@@ -3,118 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🌿 모야모 식물 집사 AI에게 물어보세요^^</title>
-    <!-- Tailwind CSS for modern styling -->
+    <title>🌿 모야모 식물 집사 AI와 대화하기</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for a clean Korean font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Apply the Noto Sans KR font to the body */
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-        }
-        /* Custom animation for the loading spinner */
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        /* Custom scrollbar for a cleaner look */
+        #chat-window::-webkit-scrollbar { width: 6px; }
+        #chat-window::-webkit-scrollbar-track { background: #f1f1f1; }
+        #chat-window::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
+        #chat-window::-webkit-scrollbar-thumb:hover { background: #555; }
+        /* Animation for the loading spinner */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .animate-spin { animation: spin 1s linear infinite; }
     </style>
 </head>
-<body class="bg-green-50 text-gray-800 flex items-center justify-center min-h-screen py-12">
+<body class="bg-green-50 text-gray-800 flex flex-col items-center justify-center min-h-screen">
 
-    <main class="bg-white p-8 rounded-2xl shadow-lg w-full max-w-2xl mx-4">
+    <main class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-4 flex flex-col h-[90vh] my-4">
         
-        <!-- Header Section -->
-        <div class="text-center mb-8">
-            <!-- Mascot Image -->
-            <img src="https://i.imgur.com/AIBkZlx.png" alt="식물 집사 마스코트" class="w-32 h-32 mx-auto mb-4 rounded-full shadow-md object-cover" onerror="this.onerror=null;this.src='https://placehold.co/128x128/EBF5EB/7F8C8D?text=Error';">
-            
-            <h1 class="text-4xl font-bold text-green-800">모야모 식물 집사 AI</h1>
-            <p class="text-gray-500 mt-2">정원 가꾸기, 식물에 대해 무엇이든 물어보세요.</p>
+        <div class="text-center mb-4 flex-shrink-0">
+            <img src="https://i.imgur.com/AIBkZlx.png" alt="식물 집사 마스코트" class="w-24 h-24 mx-auto rounded-full shadow-md object-cover">
+            <h1 class="text-3xl font-bold text-green-800 mt-2">모야모 식물 집사 AI</h1>
+            <p class="text-gray-500">정원 가꾸기, 식물에 대해 무엇이든 물어보세요.</p>
         </div>
 
-        <!-- Input Section -->
-        <div class="space-y-4">
-            <textarea id="question" rows="5" class="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="예시) 수레국화 씨앗은 언제 심는 것이 가장 좋은가요?"></textarea>
-            <button id="askButton" onclick="send()" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                질문하기
+        <div id="chat-window" class="flex-grow border border-gray-200 rounded-lg p-4 overflow-y-auto mb-4 space-y-4">
+            <div class="model-message">안녕하세요! 식물이나 정원 가꾸기에 대해 궁금한 점이 있으신가요?</div>
+        </div>
+
+        <form id="chat-form" class="flex-shrink-0 flex items-center space-x-2">
+            <input type="text" id="question" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition duration-200" placeholder="메시지를 입력하세요..." autocomplete="off">
+            <button id="askButton" type="submit" class="bg-green-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                전송
             </button>
-        </div>
-
-        <!-- Response Section -->
-        <div class="mt-8">
-            <h2 class="text-2xl font-bold text-green-800 mb-4">답변:</h2>
-            
-            <!-- Loading Indicator -->
-            <div id="loader" class="hidden items-center space-x-3 text-gray-600">
-                <div class="w-6 h-6 border-4 border-green-200 border-t-green-600 rounded-full animate-spin"></div>
-                <span>모야모에게 물어보는 중입니다... 잠시만 기다려 주세요.</span>
-            </div>
-
-            <!-- Response Content -->
-            <div id="response" class="p-4 bg-green-50 rounded-lg min-h-[100px] whitespace-pre-wrap text-gray-700"></div>
-        </div>
-
+        </form>
     </main>
 
     <script>
-        // Get references to the DOM elements
+        const chatForm = document.getElementById("chat-form");
         const questionInput = document.getElementById("question");
         const askButton = document.getElementById("askButton");
-        const loader = document.getElementById("loader");
-        const responseContainer = document.getElementById("response");
+        const chatWindow = document.getElementById("chat-window");
 
-        async function send() {
-            // This function now only sends the user's raw question.
-            // The system context is handled by the server in app.py.
-            const userQuestion = questionInput.value;
+        // KEY CHANGE 1: Initialize an array to store the conversation history.
+        let chatHistory = [];
 
-            // Simple validation
-            if (!userQuestion.trim()) {
-                responseContainer.innerText = "질문을 입력해 주세요.";
-                return;
-            }
+        // Add a default welcome message to the history.
+        chatHistory.push({
+            role: 'model',
+            parts: [{ text: "안녕하세요! 식물이나 정원 가꾸기에 대해 궁금한 점이 있으신가요?" }]
+        });
 
-            // --- Start Loading State ---
-            askButton.disabled = true;
-            loader.classList.remove("hidden");
-            loader.classList.add("flex");
-            responseContainer.innerText = "";
+        // Listen for form submission instead of button click
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevent page reload
+            const userQuestion = questionInput.value.trim();
+
+            if (!userQuestion) return;
+
+            // --- Update UI and State ---
+            addMessage(userQuestion, 'user');
+            questionInput.value = ''; // Clear input field
+            setFormState(true); // Disable form
+
+            // Display a temporary loading message
+            const loaderElement = addMessage('', 'model', true);
 
             try {
+                // KEY CHANGE 2: Send the new question AND the entire history to the backend.
                 const res = await fetch("/ask", {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    // The body now only contains the user's question.
-                    body: JSON.stringify({ question: userQuestion })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        question: userQuestion,
+                        history: chatHistory // Send the history
+                    })
                 });
 
                 const data = await res.json();
                 
+                // Update the loading message with the actual response
+                loaderElement.innerHTML = data.error ? `오류: ${data.error}` : parseResponse(data.answer);
+                if (data.error) loaderElement.classList.add('error-message');
+
+
+                // KEY CHANGE 3: Update the history array with the new turn.
                 if (res.ok) {
-                    responseContainer.innerText = data.answer;
-                } else {
-                    responseContainer.innerText = `오류가 발생했습니다: ${data.error || '알 수 없는 오류'}`;
+                    chatHistory.push({ role: 'user', parts: [{ text: userQuestion }] });
+                    chatHistory.push({ role: 'model', parts: [{ text: data.answer }] });
                 }
 
             } catch (error) {
-                console.error("Fetch error:", error);
-                responseContainer.innerText = "요청을 보내는 중 문제가 발생했습니다. 네트워크 연결을 확인해 주세요.";
+                loaderElement.innerText = "요청 중 문제가 발생했습니다. 네트워크를 확인해 주세요.";
+                loaderElement.classList.add('error-message');
             } finally {
-                // --- End Loading State ---
-                askButton.disabled = false;
-                loader.classList.add("hidden");
-                loader.classList.remove("flex");
+                setFormState(false); // Re-enable form
+                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the latest message
             }
+        });
+
+        function setFormState(isLoading) {
+            askButton.disabled = isLoading;
+            questionInput.disabled = isLoading;
         }
+
+        // Helper function to add a message to the chat window
+        function addMessage(text, type, isLoading = false) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.className = `${type}-message`;
+            
+            if (isLoading) {
+                messageWrapper.innerHTML = `<div class="flex items-center space-x-2"><div class="w-4 h-4 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin"></div><span>답변을 기다리는 중...</span></div>`;
+            } else {
+                messageWrapper.innerHTML = parseResponse(text);
+            }
+            
+            chatWindow.appendChild(messageWrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return messageWrapper; // Return the element to update it later if it's a loader
+        }
+        
+        // Simple parser to render bold text from markdown `**text**`
+        function parseResponse(text) {
+            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        }
+
+        // Add specific Tailwind classes for message styling
+        // Note: Tailwind doesn't parse classes created in JS, so we add a style tag.
+        const styleSheet = document.createElement("style");
+        styleSheet.innerText = `
+            .user-message { background-color: #e1f5fe; color: #01579b; padding: 10px; border-radius: 15px 15px 0 15px; align-self: flex-end; max-width: 80%; }
+            .model-message { background-color: #f1f8e9; color: #33691e; padding: 10px; border-radius: 15px 15px 15px 0; align-self: flex-start; max-width: 80%; }
+            .error-message { background-color: #ffcdd2; color: #c62828; }
+            #chat-window { display: flex; flex-direction: column; }
+        `;
+        document.head.appendChild(styleSheet);
+
     </script>
 </body>
 </html>
