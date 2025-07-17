@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import google.generativeai as genai
+# NEW: Import content_types for handling chat history format
+from google.generativeai.types import content_types
 
 app = Flask(__name__)
 
@@ -20,8 +22,7 @@ except FileNotFoundError:
     SYSTEM_CONTEXT = "당신은 '식물 집사'라는 이름의 식물 및 정원 가꾸기 전문가입니다. 당신의 임무는 식물이나 정원 가꾸기와 관련된 질문에만 친절하고 상세하게 답변하는 것입니다. 만약 사용자의 질문이 식물이나 정원 가꾸기와 관련이 없다면, '저는 식물과 정원 가꾸기에 대한 질문에만 답변할 수 있어요.'라고 정중히 거절해야 합니다."
     app.logger.warning("Warning: context.txt not found. Using default system context.")
 
-# IMPROVEMENT 1: Initialize the model once when the app starts.
-# Pass the system context during initialization for better instruction-following.
+# Initialize the model once when the app starts.
 try:
     model = genai.GenerativeModel(
         'gemini-1.5-flash',
@@ -38,22 +39,31 @@ def index():
     """Serves the main HTML page."""
     return render_template("index.html")
 
+# --- MODIFIED ROUTE ---
 @app.route('/ask', methods=['POST'])
 def ask():
-    """Receives a question and asks the pre-configured Gemini API."""
+    """Receives a question AND conversation history, and continues the chat."""
     if not model:
-        return jsonify({'error': 'The generative model is not available.'}), 503 # Service Unavailable
+        return jsonify({'error': 'The generative model is not available.'}), 503
 
     data = request.get_json()
     if not data or 'question' not in data or not data['question'].strip():
         return jsonify({'error': 'No question provided.'}), 400
 
     user_question = data.get("question")
+    # Get the history from the client, default to an empty list if it's the first message.
+    history_data = data.get("history", [])
 
     try:
-        # IMPROVEMENT 2: No need to combine prompts manually.
-        # The model is already aware of its system instructions.
-        response = model.generate_content(user_question)
+        # Convert the client-side history into the format the SDK expects.
+        history = [content_types.to_content(item) for item in history_data]
+
+        # Start a chat session with the existing history.
+        chat = model.start_chat(history=history)
+
+        # Send only the new message. The chat object remembers the rest.
+        response = chat.send_message(user_question)
+
         return jsonify({'answer': response.text})
     except Exception as e:
         app.logger.error(f"An error occurred with the Gemini API: {e}")
