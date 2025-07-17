@@ -81,7 +81,7 @@ def ask():
 
     # Defense Layer 2: Token Limiting (by usage cost)
     if check_and_get_usage(user_ip) >= TOKEN_LIMIT_PER_HOUR:
-        return jsonify({'error': '시간당 사용량을 초과했습니다. 잠시 후 다시 시도해 주세요.'}), 429
+        return jsonify({'error': '짧은 시간 동안 너무 많이 질문하셔서 AI가 지쳤어요... 잠시 후 다시 질문해 주세요.'}), 429
 
     data = request.get_json()
     if not data or 'question' not in data or not data['question'].strip():
