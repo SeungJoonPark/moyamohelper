@@ -1,28 +1,41 @@
 from flask import Flask, request, jsonify, render_template
 import os
 import google.generativeai as genai
-# NEW: Import content_types for handling chat history format
 from google.generativeai.types import content_types
+import time
+
+# --- NEW: IMPORTS FOR RATE AND TOKEN LIMITING ---
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
 
-# --- Configuration ---
-# Load API key from environment variables.
+# --- NEW: CONFIGURE RATE LIMITER ---
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["100 per hour"], # General limit for the whole app
+    storage_uri="memory://" # In-memory storage is fine for a single process
+)
+
+# --- NEW: SETUP FOR TOKEN USAGE LIMITING ---
+# In-memory store for token usage: { 'ip_address': (last_reset_time, token_count) }
+USER_TOKEN_USAGE = {}
+TOKEN_LIMIT_PER_HOUR = 5000 # Example: 5,000 tokens per user per hour
+
+# --- Existing Configuration ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY environment variable not set.")
 genai.configure(api_key=GEMINI_API_KEY)
 
-
-# --- Load System Context & Initialize Model (Once at Startup) ---
 try:
     with open('context.txt', 'r', encoding='utf-8') as f:
         SYSTEM_CONTEXT = f.read()
 except FileNotFoundError:
-    SYSTEM_CONTEXT = "당신은 '식물 집사'라는 이름의 식물 및 정원 가꾸기 전문가입니다. 당신의 임무는 식물이나 정원 가꾸기와 관련된 질문에만 친절하고 상세하게 답변하는 것입니다. 만약 사용자의 질문이 식물이나 정원 가꾸기와 관련이 없다면, '저는 식물과 정원 가꾸기에 대한 질문에만 답변할 수 있어요.'라고 정중히 거절해야 합니다."
+    SYSTEM_CONTEXT = "당신은 '식물 집사'라는 이름의 식물 및 정원 가꾸기 전문가입니다..." # Your default context
     app.logger.warning("Warning: context.txt not found. Using default system context.")
 
-# Initialize the model once when the app starts.
 try:
     model = genai.GenerativeModel(
         'gemini-1.5-flash',
@@ -30,44 +43,75 @@ try:
     )
 except Exception as e:
     app.logger.error(f"Failed to initialize GenerativeModel: {e}")
-    model = None # Handle cases where initialization might fail.
+    model = None
 
+# --- NEW: HELPER FUNCTIONS FOR TOKEN LIMITING ---
+def check_and_get_usage(user_ip):
+    """Checks a user's token usage and resets it if the hour has passed."""
+    current_time = time.time()
+    last_reset, token_count = USER_TOKEN_USAGE.get(user_ip, (current_time, 0))
 
-# --- Routes ---
+    if current_time - last_reset > 3600: # 3600 seconds = 1 hour
+        # More than an hour has passed, reset the counter
+        USER_TOKEN_USAGE[user_ip] = (current_time, 0)
+        return 0
+    return token_count
+
+def update_token_usage(user_ip, tokens_used):
+    """Adds new token usage to the user's current total for the hour."""
+    current_time = time.time()
+    # Ensure the entry is fresh before updating
+    current_count = check_and_get_usage(user_ip)
+    last_reset = USER_TOKEN_USAGE.get(user_ip, (current_time, 0))[0]
+    USER_TOKEN_USAGE[user_ip] = (last_reset, current_count + tokens_used)
+
+# --- ROUTES ---
 @app.route('/')
 def index():
-    """Serves the main HTML page."""
     return render_template("index.html")
 
-# --- MODIFIED ROUTE ---
 @app.route('/ask', methods=['POST'])
+# Defense Layer 1: Rate Limiting (by requests)
+@limiter.limit("10 per minute")
 def ask():
-    """Receives a question AND conversation history, and continues the chat."""
     if not model:
-        return jsonify({'error': 'The generative model is not available.'}), 503
+        return jsonify({'error': 'AI 모델을 사용할 수 없습니다.'}), 503
+
+    user_ip = get_remote_address()
+
+    # Defense Layer 2: Token Limiting (by usage cost)
+    if check_and_get_usage(user_ip) >= TOKEN_LIMIT_PER_HOUR:
+        return jsonify({'error': '시간당 사용량을 초과했습니다. 잠시 후 다시 시도해 주세요.'}), 429
 
     data = request.get_json()
     if not data or 'question' not in data or not data['question'].strip():
-        return jsonify({'error': 'No question provided.'}), 400
+        return jsonify({'error': '질문이 제공되지 않았습니다.'}), 400
 
     user_question = data.get("question")
-    # Get the history from the client, default to an empty list if it's the first message.
     history_data = data.get("history", [])
 
     try:
-        # Convert the client-side history into the format the SDK expects.
         history = [content_types.to_content(item) for item in history_data]
-
-        # Start a chat session with the existing history.
         chat = model.start_chat(history=history)
 
-        # Send only the new message. The chat object remembers the rest.
+        # Count input tokens before the API call
+        input_tokens = model.count_tokens(chat.history + [content_types.to_content(user_question)])
+
+        # Generate the response
         response = chat.send_message(user_question)
 
+        # Count output tokens and update the user's total usage
+        output_tokens = model.count_tokens(response.text)
+        total_tokens_used = input_tokens.total_tokens + output_tokens.total_tokens
+        update_token_usage(user_ip, total_tokens_used)
+        
+        app.logger.info(f"User {user_ip} used {total_tokens_used} tokens.")
+
         return jsonify({'answer': response.text})
+
     except Exception as e:
-        app.logger.error(f"An error occurred with the Gemini API: {e}")
-        return jsonify({'error': 'An internal error occurred while processing the request.'}), 500
+        app.logger.error(f"An error occurred with the Gemini API for user {user_ip}: {e}")
+        return jsonify({'error': 'AI와 통신하는 중 내부 오류가 발생했습니다.'}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
