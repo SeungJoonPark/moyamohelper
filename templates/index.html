@@ -10,19 +10,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
-        /* Custom scrollbar for a cleaner look */
         #chat-window::-webkit-scrollbar { width: 6px; }
         #chat-window::-webkit-scrollbar-track { background: #f1f1f1; }
         #chat-window::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
         #chat-window::-webkit-scrollbar-thumb:hover { background: #555; }
-        /* Animation for the loading spinner */
         @keyframes spin { to { transform: rotate(360deg); } }
         .animate-spin { animation: spin 1s linear infinite; }
     </style>
 </head>
-<body class="bg-green-50 text-gray-800 flex flex-col items-center justify-center min-h-screen">
+<body class="bg-green-50 text-gray-800 flex items-center justify-center min-h-screen py-4">
 
-    <main class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-4 flex flex-col h-[90vh] my-4">
+    <main class="bg-white p-6 rounded-2xl shadow-lg w-full max-w-2xl mx-4 flex flex-col my-4">
         
         <div class="text-center mb-4 flex-shrink-0">
             <img src="https://i.imgur.com/AIBkZlx.png" alt="식물 집사 마스코트" class="w-24 h-24 mx-auto rounded-full shadow-md object-cover">
@@ -30,8 +28,12 @@
             <p class="text-gray-500">정원 가꾸기, 식물에 대해 무엇이든 물어보세요.</p>
         </div>
 
-        <div id="chat-window" class="flex-grow border border-gray-200 rounded-lg p-4 overflow-y-auto mb-4 space-y-4">
+        <div id="chat-window" class="flex-grow border border-gray-200 rounded-lg p-4 overflow-y-auto mb-4 space-y-4 min-h-[150px] max-h-[60vh]">
             <div class="model-message">안녕하세요! 식물이나 정원 가꾸기에 대해 궁금한 점이 있으신가요?</div>
+            
+            <div id="sample-question" class="sample-question">
+                질문의 예: 백일홍 씨앗이 심은 지 3주가 지났는데도 발아하지 않아요. 어떻게 해야하나요?
+            </div>
         </div>
 
         <form id="chat-form" class="flex-shrink-0 flex items-center space-x-2">
@@ -48,60 +50,53 @@
         const askButton = document.getElementById("askButton");
         const chatWindow = document.getElementById("chat-window");
 
-        // KEY CHANGE 1: Initialize an array to store the conversation history.
         let chatHistory = [];
-
-        // Add a default welcome message to the history.
         chatHistory.push({
             role: 'model',
             parts: [{ text: "안녕하세요! 식물이나 정원 가꾸기에 대해 궁금한 점이 있으신가요?" }]
         });
 
-        // Listen for form submission instead of button click
         chatForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent page reload
+            e.preventDefault();
             const userQuestion = questionInput.value.trim();
-
             if (!userQuestion) return;
 
-            // --- Update UI and State ---
-            addMessage(userQuestion, 'user');
-            questionInput.value = ''; // Clear input field
-            setFormState(true); // Disable form
+            // CHANGE 4: Hide the sample question on the first user interaction.
+            const sampleElement = document.getElementById('sample-question');
+            if (sampleElement) {
+                sampleElement.style.display = 'none';
+            }
 
-            // Display a temporary loading message
+            addMessage(userQuestion, 'user');
+            questionInput.value = '';
+            setFormState(true);
+
             const loaderElement = addMessage('', 'model', true);
 
             try {
-                // KEY CHANGE 2: Send the new question AND the entire history to the backend.
                 const res = await fetch("/ask", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         question: userQuestion,
-                        history: chatHistory // Send the history
+                        history: chatHistory
                     })
                 });
-
                 const data = await res.json();
                 
-                // Update the loading message with the actual response
                 loaderElement.innerHTML = data.error ? `오류: ${data.error}` : parseResponse(data.answer);
                 if (data.error) loaderElement.classList.add('error-message');
 
-
-                // KEY CHANGE 3: Update the history array with the new turn.
                 if (res.ok) {
                     chatHistory.push({ role: 'user', parts: [{ text: userQuestion }] });
                     chatHistory.push({ role: 'model', parts: [{ text: data.answer }] });
                 }
-
             } catch (error) {
                 loaderElement.innerText = "요청 중 문제가 발생했습니다. 네트워크를 확인해 주세요.";
                 loaderElement.classList.add('error-message');
             } finally {
-                setFormState(false); // Re-enable form
-                chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the latest message
+                setFormState(false);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
             }
         });
 
@@ -110,7 +105,6 @@
             questionInput.disabled = isLoading;
         }
 
-        // Helper function to add a message to the chat window
         function addMessage(text, type, isLoading = false) {
             const messageWrapper = document.createElement('div');
             messageWrapper.className = `${type}-message`;
@@ -123,25 +117,23 @@
             
             chatWindow.appendChild(messageWrapper);
             chatWindow.scrollTop = chatWindow.scrollHeight;
-            return messageWrapper; // Return the element to update it later if it's a loader
+            return messageWrapper;
         }
         
-        // Simple parser to render bold text from markdown `**text**`
         function parseResponse(text) {
             return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         }
 
-        // Add specific Tailwind classes for message styling
-        // Note: Tailwind doesn't parse classes created in JS, so we add a style tag.
         const styleSheet = document.createElement("style");
         styleSheet.innerText = `
             .user-message { background-color: #e1f5fe; color: #01579b; padding: 10px; border-radius: 15px 15px 0 15px; align-self: flex-end; max-width: 80%; }
             .model-message { background-color: #f1f8e9; color: #33691e; padding: 10px; border-radius: 15px 15px 15px 0; align-self: flex-start; max-width: 80%; }
             .error-message { background-color: #ffcdd2; color: #c62828; }
             #chat-window { display: flex; flex-direction: column; }
+            /* CHANGE 5: Added styling for the new sample question element. */
+            .sample-question { background-color: #f9fafb; color: #9ca3af; padding: 10px 15px; border-radius: 12px; font-size: 0.9em; text-align: center; border: 1px dashed #e5e7eb; }
         `;
         document.head.appendChild(styleSheet);
-
     </script>
 </body>
 </html>
