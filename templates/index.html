@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         body { font-family: 'Noto Sans KR', sans-serif; }
         #chat-window::-webkit-scrollbar { width: 6px; }
@@ -61,7 +64,6 @@
             const userQuestion = questionInput.value.trim();
             if (!userQuestion) return;
 
-            // CHANGE 4: Hide the sample question on the first user interaction.
             const sampleElement = document.getElementById('sample-question');
             if (sampleElement) {
                 sampleElement.style.display = 'none';
@@ -121,7 +123,9 @@
         }
         
         function parseResponse(text) {
-            return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // STEP 2: USE THE MARKED.JS LIBRARY TO PARSE ALL MARKDOWN
+            // This will handle bold, lists, line breaks, and more automatically.
+            return marked.parse(text || '');
         }
 
         const styleSheet = document.createElement("style");
@@ -130,8 +134,12 @@
             .model-message { background-color: #f1f8e9; color: #33691e; padding: 10px; border-radius: 15px 15px 15px 0; align-self: flex-start; max-width: 80%; }
             .error-message { background-color: #ffcdd2; color: #c62828; }
             #chat-window { display: flex; flex-direction: column; }
-            /* CHANGE 5: Added styling for the new sample question element. */
             .sample-question { background-color: #f9fafb; color: #9ca3af; padding: 10px 15px; border-radius: 12px; font-size: 0.9em; text-align: center; border: 1px dashed #e5e7eb; }
+            
+            /* Styles for rendered markdown */
+            .model-message p { margin-bottom: 0.5rem; }
+            .model-message ul { list-style-type: disc; padding-left: 1.5rem; }
+            .model-message strong { font-weight: 600; }
         `;
         document.head.appendChild(styleSheet);
     </script>
