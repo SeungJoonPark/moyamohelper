@@ -43,8 +43,8 @@ try:
         'gemini-1.5-flash',
         system_instruction=SYSTEM_CONTEXT
     )
-    # Compile the regex pattern once for efficiency
-    citation_pattern = re.compile(r'\')
+    # --- UPDATED: A much simpler, error-proof pattern ---
+    citation_pattern = re.compile(r'__cite_\d+__')
 except Exception as e:
     app.logger.error(f"Failed to initialize GenerativeModel: {e}")
     model = None
