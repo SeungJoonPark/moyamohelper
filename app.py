@@ -21,7 +21,7 @@ limiter = Limiter(
 
 # Setup for Token Usage Limiting
 USER_TOKEN_USAGE = {}
-TOKEN_LIMIT_PER_HOUR = 500000
+TOKEN_LIMIT_PER_HOUR = 5000
 
 # Gemini API Configuration
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
