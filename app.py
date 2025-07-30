@@ -3,6 +3,7 @@ import os
 import google.generativeai as genai
 from google.generativeai.types import content_types
 import time
+import re  # --- ADDED: Import the regular expression module ---
 
 # --- NEW: IMPORTS FOR RATE AND TOKEN LIMITING ---
 from flask_limiter import Limiter
@@ -107,7 +108,11 @@ def ask():
         
         app.logger.info(f"User {user_ip} used {total_tokens_used} tokens.")
 
-        return jsonify({'answer': response.text})
+        # --- MODIFIED: Clean the response text before sending it to the user ---
+        # This removes all tags for a natural user-facing display.
+        clean_answer = re.sub(r'\', '', response.text).strip()
+        
+        return jsonify({'answer': clean_answer})
 
     except Exception as e:
         app.logger.error(f"An error occurred with the Gemini API for user {user_ip}: {e}")
