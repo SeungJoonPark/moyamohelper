@@ -111,7 +111,6 @@ def ask():
     # --- MODIFIED: Clean the response text before sending it to the user ---
         # This removes all tags for a natural user-facing display.
         clean_answer = re.sub(r'\', '', response.text).strip()
-        
         return jsonify({'answer': clean_answer})
 
     except Exception as e:
