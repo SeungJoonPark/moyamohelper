@@ -108,7 +108,7 @@ def ask():
         
         app.logger.info(f"User {user_ip} used {total_tokens_used} tokens.")
 
-        # --- MODIFIED: Clean the response text before sending it to the user ---
+    # --- MODIFIED: Clean the response text before sending it to the user ---
         # This removes all tags for a natural user-facing display.
         clean_answer = re.sub(r'\', '', response.text).strip()
         
