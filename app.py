@@ -8,6 +8,24 @@ import re
 # Imports for Rate and Token Limiting
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+# ... imports ...
+
+app = Flask(__name__)
+
+# --- DEBUGGING SNIPPET ---
+# This will print to your Render System Logs on startup
+key = os.getenv("GEMINI_API_KEY")
+if key:
+    print(f"DEBUG: API Key loaded. Starts with: {key[:5]}... Ends with: ...{key[-4:]}")
+else:
+    print("DEBUG: API Key is MISSING or None")
+# -------------------------
+
+# ... rest of code ...
+
+
+
+
 
 app = Flask(__name__)
 
